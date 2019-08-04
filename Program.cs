@@ -10,11 +10,8 @@ namespace minetestnodestats
 {
     class Program
     {
-        static void Main(string[] args)
+        static IEnumerable<Block> LoadBlocks()
         {
-            var stopwatch = Stopwatch.StartNew();
-            Dictionary<string, long> types = new Dictionary<string, long>();
-            var consoleThrottleStopwatch = Stopwatch.StartNew();
             using (var connection = new SQLiteConnection(@"Data Source=C:\Dump\minetest-backup\home\filhit\.minetest\worlds\our-world\map.sqlite"))
             {
                 connection.Open();
@@ -23,6 +20,7 @@ namespace minetestnodestats
                 long i = 0;
                 var tablesCommand = new SQLiteCommand("SELECT pos,data,length(data) FROM blocks", connection);
                 var reader = tablesCommand.ExecuteReader();
+                var consoleThrottleStopwatch = Stopwatch.StartNew();
                 if (reader.HasRows)
                 {
                     while (reader.Read())
@@ -38,26 +36,56 @@ namespace minetestnodestats
                         var data = new byte[length];
                         reader.GetBytes(1, 0, data, 0, length);
                         var block = new Block(pos, data);
-                        block.Decode();
-                        for (byte x = 0; x < 16; x++)
-                            for (byte y = 0; y < 16; y++)
-                                for (byte z = 0; z < 16; z++)
-                                {
-                                    string node = block.getNode(x, y, z);
-                                    if (types.ContainsKey(node))
-                                    {
-                                        types[node]++;
-                                    }
-                                    else
-                                    {
-                                        types[node] = 1;
-                                    }
-                                }
+                        yield return block;
                     }
                 }
             }
+        }
 
-            foreach (var type in types.OrderBy(x => x.Key))
+        static Dictionary<string, long> GetNodesMap(Block block)
+        {
+            Dictionary<string, long> nodesMap = new Dictionary<string, long>();
+            block.Decode();
+            for (byte x = 0; x < 16; x++)
+                for (byte y = 0; y < 16; y++)
+                    for (byte z = 0; z < 16; z++)
+                    {
+                        string node = block.getNode(x, y, z);
+                        if (nodesMap.ContainsKey(node))
+                        {
+                            nodesMap[node]++;
+                        }
+                        else
+                        {
+                            nodesMap[node] = 1;
+                        }
+                    }
+            return nodesMap;
+        }
+
+        static void Main(string[] args)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            Dictionary<string, long> result = new Dictionary<string, long>();
+
+            var nodesMaps = LoadBlocks().AsParallel()
+                .Select(GetNodesMap)
+                .ToList();
+
+            foreach (var nodesMap in nodesMaps)
+            {
+                foreach (var type in nodesMap)
+                    if (result.ContainsKey(type.Key))
+                    {
+                        result[type.Key] += type.Value;
+                    }
+                    else
+                    {
+                        result[type.Key] = type.Value;
+                    }
+            }
+
+            foreach (var type in result.OrderBy(x => x.Key))
             {
                 Console.WriteLine($"{type.Key}: {type.Value}");
             }
