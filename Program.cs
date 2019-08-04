@@ -30,7 +30,7 @@ namespace minetestnodestats
                         if (consoleThrottleStopwatch.Elapsed > TimeSpan.FromSeconds(1))
                         {
                             consoleThrottleStopwatch.Restart();
-                            Console.WriteLine($"{((double)i / totalBlocks * 100):0.00} ({i} of {totalBlocks})");
+                            Console.WriteLine($"{((double)i / totalBlocks * 100):0.00}% ({i} of {totalBlocks})");
                         }
                         i++;
                         var pos = reader.GetInt64(0);
@@ -62,7 +62,7 @@ namespace minetestnodestats
                 Console.WriteLine($"{type.Key}: {type.Value}");
             }
 
-            Console.WriteLine($"Read all data in {stopwatch.Elapsed}");
+            Console.WriteLine($"Processed world in {stopwatch.Elapsed}");
         }
     }
 
