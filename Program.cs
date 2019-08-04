@@ -50,7 +50,7 @@ namespace minetestnodestats
                                     }
                                     else
                                     {
-                                        types[node] = 0;
+                                        types[node] = 1;
                                     }
                                 }
                     }
