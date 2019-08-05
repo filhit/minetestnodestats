@@ -63,27 +63,31 @@ namespace minetestnodestats
             return nodesMap;
         }
 
+        static Dictionary<string, long> MergeDictionaries(Dictionary<string, long> a, Dictionary<string, long> b)
+        {
+            var result = new Dictionary<string, long>();
+            foreach(var type in a.Concat(b))
+            {
+                if (result.ContainsKey(type.Key))
+                {
+                    result[type.Key] += type.Value;
+                }
+                else
+                {
+                    result[type.Key] = type.Value;
+                }
+            }
+
+            return result;
+        }
+
         static void Main(string[] args)
         {
             var stopwatch = Stopwatch.StartNew();
-            Dictionary<string, long> result = new Dictionary<string, long>();
 
-            var nodesMaps = LoadBlocks().AsParallel()
+            var result = LoadBlocks().AsParallel()
                 .Select(GetNodesMap)
-                .ToList();
-
-            foreach (var nodesMap in nodesMaps)
-            {
-                foreach (var type in nodesMap)
-                    if (result.ContainsKey(type.Key))
-                    {
-                        result[type.Key] += type.Value;
-                    }
-                    else
-                    {
-                        result[type.Key] = type.Value;
-                    }
-            }
+                .Aggregate(new Dictionary<string, long>(), MergeDictionaries);
 
             foreach (var type in result.OrderBy(x => x.Key))
             {
